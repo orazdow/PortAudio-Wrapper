@@ -108,6 +108,8 @@ static int patestCallback(
 
 
 class Pa{
+    
+private:    
 
  typedef int(*mainCallBack)(const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void*); 
  mainCallBack PaCallBack;
@@ -127,12 +129,14 @@ class Pa{
  unsigned int framesperbuffer = 0;
  unsigned int samplerate = 44100;
  bool runloop = false;
+ 
 #ifdef C11
  std::thread t;
 #endif 
  
 public:    
-  enum RunMode {wait = 1, waitInThread = 2, runDontTerminate = 3, sleep = 4, waitForKey = 5 };
+    
+ enum RunMode {wait = 1, waitInThread = 2, runDontTerminate = 3, sleep = 4, waitForKey = 5 };
 
 Pa(mainCallBack func, void* data)
 {
@@ -165,8 +169,10 @@ Pa(miniCallBack func, unsigned int samp, unsigned int frames, unsigned int inch,
       inchannels = inch;
       outchannels = outch;            
 }
+ 
+private:
     
- void startStream(Pa::RunMode mode){
+void startStream(Pa::RunMode mode){
 
     PaError err;
     PaStreamParameters outputParameters;   
@@ -222,13 +228,14 @@ Pa(miniCallBack func, unsigned int samp, unsigned int frames, unsigned int inch,
             Pa_Sleep(100);
             } 
        }
-       //look at sleep source
+       
        if(mode == RunMode::sleep){
            Pa_Sleep(sleepTime);
        }
        
        if(mode == RunMode::waitForKey){
-           printf("\nPress enter to stop stream:\n");
+           printf("\nPress any key stop stream:\n");
+           fflush(stdout);
            getchar();
        }
     
@@ -245,10 +252,25 @@ Pa(miniCallBack func, unsigned int samp, unsigned int frames, unsigned int inch,
      fprintf( stderr, "An error occured while using the portaudio stream\n" );
      fprintf( stderr, "Error number: %d\n", err );
      fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+     fflush(stdout);
      
  }
- /*
-  
+ 
+static PaError paCb(const void *inputBuffer, void *outputBuffer,
+                        unsigned long framesPerBuffer,
+                        const PaStreamCallbackTimeInfo* timeInfo,
+                        PaStreamCallbackFlags statusFlags,
+                        void* udata){
+     
+     cbPtr(inputBuffer, outputBuffer, framesPerBuffer, udata);
+    
+     return paContinue;
+     
+ }
+
+public:
+  /*
+ 
 run infinite : void  - wait 1
 run in thread : true - waitInThread 2
 run, don't terminate : false - runDontTerminate 3
@@ -262,15 +284,18 @@ wait for key : -int waitForKey 5
   * run(-int)
   * run(mode)
   
-  */
-  
+  */   
  void start(){
     startStream(RunMode::wait); 
  }
  
  void start(bool in){
      if(in){
-         startStream(RunMode::waitInThread);
+        #ifdef C11
+         t = std::thread(&Pa::startStream, this, RunMode::waitInThread);
+        #else
+         startStream(runMode::wait);
+        #endif
      }else{
          startStream(RunMode::runDontTerminate);
      }
@@ -286,25 +311,25 @@ wait for key : -int waitForKey 5
  }
  
  void start(RunMode runmode){
-     startStream(runmode);
+     if(runmode == RunMode::waitInThread){
+        #ifdef C11
+         t = std::thread(&Pa::startStream, this, RunMode::waitInThread);
+        #else
+         startStream(runMode::wait);
+        #endif   
+     }else{
+        startStream(runmode); 
+     }   
  }
   
  void setSleepTime(unsigned long time){
      sleepTime = time;
  }
  
-static PaError paCb(const void *inputBuffer, void *outputBuffer,
-                        unsigned long framesPerBuffer,
-                        const PaStreamCallbackTimeInfo* timeInfo,
-                        PaStreamCallbackFlags statusFlags,
-                        void* udata){
-     
-     cbPtr(inputBuffer, outputBuffer, framesPerBuffer, udata);
-    
-     return paContinue;
-     
+ void setSampleFormat(PaSampleFormat format){
+     sampleFormat = format;
  }
- 
+
  void stop(){
      runloop = false;
     #ifdef C11
@@ -324,6 +349,7 @@ static PaError paCb(const void *inputBuffer, void *outputBuffer,
      fprintf( stderr, "An errooor occured while using the portaudio stream\n" );
      fprintf( stderr, "Error number: %d\n", err );
      fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );    
+     fflush(stdout);
      
  }
  
@@ -348,21 +374,21 @@ int main(void)
    // Pa a(patestCallback, 44100, 0, 0, 1, &osc);
 
    
-    a.start();
+    a.start(true);
     
-//    while(aa < 999999999){
-//        aa++;
-//        if(aa%100000 == 0){
-//            printf("sdsdf");
-//        }
-//    }
-//   // while(true){}
-//    a.stop();
-//        while(aa > 0){
-//        aa--;
-//        if(aa%100000 == 0){
-//            printf("vcxvcx");
-//        }
-//    }
+    while(aa < 999999999){
+        aa++;
+        if(aa%100000 == 0){
+            printf("sdsdf");
+        }
+    }
+   // while(true){}
+    a.stop();   /////////fix.....
+        while(aa > 0){
+        aa--;
+        if(aa%100000 == 0){
+            printf("vcxvcx");
+        }
+    }
 
 }
