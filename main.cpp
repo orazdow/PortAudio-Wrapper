@@ -1,8 +1,14 @@
 #include <stdio.h>
 #include <math.h>
 #include "portaudio.h"
+#include <thread>
 
 #define TAU 6.2831853
+#if __cplusplus > 199711L
+#define C11 
+#include <thread>
+#endif
+
 
 
 void initTable(float table[], int size){
@@ -51,20 +57,25 @@ float incp(float &p, float &s, float &amp){
       
 };
 
-//void testcallback(void* userdata){
-//    
-//    Osc *o = (Osc*)userdata;
-//    
-////    printf("hi %i\n", a);
-////    printf("hi %f\n", o->inc());
-////    printf("hi %f\n", o->inc());
-//
-//    for(int i = 0; i < 1000; i++){
-//      //  printf("%f\n", o->inc());
-//        o->inc();
-//    }
-//    
-//}
+
+
+static void miniFunc(const void *inputBuffer, void *outputBuffer, unsigned long framesPerBuffer,void* userdata )
+{
+    float *out = (float*)outputBuffer;
+     unsigned long i;
+
+     (void) inputBuffer;
+     
+    Osc *o = (Osc*)userdata;
+    
+    for( i=0; i< framesPerBuffer; i++ ){
+         *out = 0;
+         
+         *out = o->inc();
+        
+         *out++;
+     }
+}
 
 static int patestCallback( 
                             const void *inputBuffer, void *outputBuffer,
@@ -89,7 +100,8 @@ static int patestCallback(
         
          *out++;
      }
-
+    
+    //    miniFunc(inputBuffer, outputBuffer, framesPerBuffer, userdata );
     
      return paContinue;
 }
@@ -97,121 +109,260 @@ static int patestCallback(
 
 class Pa{
 
-int(*PaCallBack)( const void *inputBuffer, void *outputBuffer,
-                    unsigned long framesPerBuffer,
-                    const PaStreamCallbackTimeInfo* timeInfo,
-                    PaStreamCallbackFlags statusFlags,
-                    void* data);   
+ typedef int(*mainCallBack)(const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void*); 
+ mainCallBack PaCallBack;
+
+ typedef void (*miniCallBack)(const void*, void*, unsigned long,void*);
+ static miniCallBack cbPtr;
+ 
+ void (*streamFinished)(void*) = NULL;
+ 
  void* userDataType;
  PaStream *stream;
+ PaSampleFormat sampleFormat = paFloat32;
+ unsigned long sleepTime = 10000;
+ 
  unsigned int inchannels = 0;
  unsigned int outchannels = 1;
  unsigned int framesperbuffer = 0;
  unsigned int samplerate = 44100;
- void* streamFinished = NULL;
- /////////
- //void(*testcb)(void*);
- 
+ bool runloop = false;
+#ifdef C11
+ std::thread t;
+#endif 
  
 public:    
+  enum RunMode {wait = 1, waitInThread = 2, runDontTerminate = 3, sleep = 4, waitForKey = 5 };
 
-/*
- callback, sample rate, framesperbuffer, inchannels, outchannels, *userdata
- */    
-    
-//Pa( void(*func)(void*), void* data )
-    Pa(int(&func)( const void *inputBuffer, void *outputBuffer,
-                        unsigned long framesPerBuffer,
-                        const PaStreamCallbackTimeInfo* timeInfo,
-                        PaStreamCallbackFlags statusFlags,
-                        void*),
-            void* data)
- //unsigned int samplerate, unsigned int framesperbuffer, unsigned int inchannels, unsigned int outchannels, void *dataType )
+Pa(mainCallBack func, void* data)
 {
-    //this->PaCallBack = func;
-//    this->userDataType = dataType;
-//    this->samplerate = samplerate;
-//    this->framesperbuffer = framesperbuffer;
-//    this->inchannels = inchannels;
-//    this->outchannels = outchannels;
-        this->PaCallBack = func;
-   // this->testcb = func;
-    this->userDataType = data;
+      PaCallBack = func;
+      userDataType = data;
+}
+
+Pa(mainCallBack func, unsigned int samp, unsigned int frames, unsigned int inch, unsigned int outch, void *data)
+{
+      PaCallBack = func;
+      userDataType = data;
+      samplerate = samp;
+      framesperbuffer = frames;
+      inchannels = inch;
+      outchannels = outch;
+}
+
+Pa(miniCallBack func, void* data)
+{
+      cbPtr = func;
+      userDataType = data;            
+}
+
+Pa(miniCallBack func, unsigned int samp, unsigned int frames, unsigned int inch, unsigned int outch, void *data)
+{
+      cbPtr = func;
+      userDataType = data;
+      samplerate = samp;
+      framesperbuffer = frames;
+      inchannels = inch;
+      outchannels = outch;            
 }
     
- void start(){
+ void startStream(Pa::RunMode mode){
 
     PaError err;
     PaStreamParameters outputParameters;   
+    PaStreamParameters inputParameters;
+    
+    
      err = Pa_Initialize();
      if( err != paNoError ) goto error;
 
+    if(outchannels > 0){
         outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
-        if (outputParameters.device == paNoDevice) {
+       if (outputParameters.device == paNoDevice) {
          fprintf(stderr,"Error: No default output device.\n");
-        // printf("haaaa");
          goto error;
        }
-
-       outputParameters.channelCount = outchannels;      
-       outputParameters.sampleFormat = paFloat32; /* 32 bit floating point output */
-       outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
-       outputParameters.hostApiSpecificStreamInfo = NULL;  
-       
-         err = Pa_OpenStream(
+        outputParameters.channelCount = outchannels;      
+        outputParameters.sampleFormat = sampleFormat; 
+        outputParameters.suggestedLatency = Pa_GetDeviceInfo( outputParameters.device )->defaultLowOutputLatency;
+        outputParameters.hostApiSpecificStreamInfo = NULL;   
+    }
+     
+    if(inchannels > 0){ 
+        inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
+        if (inputParameters.device == paNoDevice) {
+          fprintf(stderr,"Error: No default input device.\n");
+          goto error;
+        }
+        inputParameters.channelCount = inchannels;  
+        inputParameters.sampleFormat = sampleFormat; 
+        inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
+        inputParameters.hostApiSpecificStreamInfo = NULL;
+    }
+     
+     
+      err = Pa_OpenStream(
                &stream,
-               NULL, /* no input */
-               &outputParameters,
+               (inchannels > 0 ? &inputParameters : NULL), 
+               (outchannels > 0 ? &outputParameters : NULL),
                samplerate,
                framesperbuffer,
                paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-               PaCallBack, //
+               (cbPtr == NULL ? PaCallBack : &Pa::paCb),
                userDataType );
      
-     if( err != paNoError ) goto error;
-       err = Pa_StartStream( stream );
-     if( err != paNoError ) goto error;
+       if( err != paNoError ) goto error;
      
-     while(true){}
+       err = Pa_StartStream( stream );
+       if( err != paNoError ) goto error;
        
-     error:
+       if(mode == RunMode::wait || mode == RunMode::waitInThread){
+            runloop = true;
+            while(runloop){
+            Pa_Sleep(100);
+            } 
+       }
+       //look at sleep source
+       if(mode == RunMode::sleep){
+           Pa_Sleep(sleepTime);
+       }
+       
+       if(mode == RunMode::waitForKey){
+           printf("\nPress enter to stop stream:\n");
+           getchar();
+       }
+    
+
+       if(mode != RunMode::runDontTerminate){
+       Pa_StopStream( stream );  //needed?    
+       Pa_Terminate();
+       }
+       
+     return;
+       
+     error:               
      Pa_Terminate();
      fprintf( stderr, "An error occured while using the portaudio stream\n" );
      fprintf( stderr, "Error number: %d\n", err );
      fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
      
  }
+ /*
+  
+run infinite : void  - wait 1
+run in thread : true - waitInThread 2
+run, don't terminate : false - runDontTerminate 3
+sleep : +int  - sleep 4
+wait for key : -int waitForKey 5
  
- void test(){
-    // testcb(userDataType);
-     PaCallBack(NULL, NULL, 60, NULL, NULL, userDataType );
-
+  * run(void)
+  * run(true)
+  * run(false)
+  * run(int)
+  * run(-int)
+  * run(mode)
+  
+  */
+  
+ void start(){
+    startStream(RunMode::wait); 
  }
-
  
- void setFinishedCallBack(void(&func)(void* a)){
+ void start(bool in){
+     if(in){
+         startStream(RunMode::waitInThread);
+     }else{
+         startStream(RunMode::runDontTerminate);
+     }
+ }
+ 
+ void start(long in){
+     if(in < 0){
+         startStream(RunMode::waitForKey);
+     }else{
+         sleepTime = in;
+         startStream(RunMode::sleep);
+     }
+ }
+ 
+ void start(RunMode runmode){
+     startStream(runmode);
+ }
+  
+ void setSleepTime(unsigned long time){
+     sleepTime = time;
+ }
+ 
+static PaError paCb(const void *inputBuffer, void *outputBuffer,
+                        unsigned long framesPerBuffer,
+                        const PaStreamCallbackTimeInfo* timeInfo,
+                        PaStreamCallbackFlags statusFlags,
+                        void* udata){
+     
+     cbPtr(inputBuffer, outputBuffer, framesPerBuffer, udata);
+    
+     return paContinue;
+     
+ }
+ 
+ void stop(){
+     runloop = false;
+    #ifdef C11
+     t.join();
+    #endif 
+     PaError err;
+     err = Pa_StopStream( stream );
+     
+     if( err !=  paNoError)  
+         goto error;
+     
+     Pa_Terminate();
+     return;
+     
+     error:               
+     Pa_Terminate();
+     fprintf( stderr, "An errooor occured while using the portaudio stream\n" );
+     fprintf( stderr, "Error number: %d\n", err );
+     fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );    
+     
+ }
+ 
+void setFinishedCallBack(void(&func)(void* a)){
  
 }
- 
-// void setTestCallback(void(&f)(int, void*)){
-//     testcb = f;
-// }
- 
+  
 };
+Pa::miniCallBack Pa::cbPtr = NULL;
 
 int main(void)
 {
+    int aa = 0;
     float table[2048];
     initTable(table,2048);
     
     Osc osc(table, 2048, 78, 44100);
 
-    Pa a(patestCallback, &osc);
+    //  Pa a(patestCallback, &osc);
+        Pa a(miniFunc, &osc);
 
+   // Pa a(patestCallback, 44100, 0, 0, 1, &osc);
+
+   
     a.start();
-
-//   a.setTestCallback(testcallback);
-  // a.test();
-        
+    
+//    while(aa < 999999999){
+//        aa++;
+//        if(aa%100000 == 0){
+//            printf("sdsdf");
+//        }
+//    }
+//   // while(true){}
+//    a.stop();
+//        while(aa > 0){
+//        aa--;
+//        if(aa%100000 == 0){
+//            printf("vcxvcx");
+//        }
+//    }
 
 }
