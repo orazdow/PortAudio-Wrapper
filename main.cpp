@@ -4,10 +4,11 @@
 #include <thread>
 
 #define TAU 6.2831853
-#if __cplusplus > 199711L
-#define C11 
-#include <thread>
-#endif
+
+//#if __cplusplus > 199711L
+//#define C11 
+//#include <thread>
+//#endif
 
 
 
@@ -77,6 +78,20 @@ static void miniFunc(const void *inputBuffer, void *outputBuffer, unsigned long 
      }
 }
 
+void floatFunc(const float* in, float* out, unsigned long frames, void* data){
+    
+           
+    Osc *o = (Osc*)data;
+    
+    for(unsigned long i=0; i< frames; i++ ){
+         
+         *out = o->inc();       
+          out++;
+     }
+    
+    
+}
+
 static int patestCallback( 
                             const void *inputBuffer, void *outputBuffer,
                              unsigned long framesPerBuffer,
@@ -108,14 +123,24 @@ static int patestCallback(
 
 
 class Pa{
+
+public:    
     
-private:    
+//enum RunMode {wait, waitInThread, dontTerminate, sleep, waitForKey };
+enum RunMode {dontTerminate, wait, sleep, waitForKey};
+    
+private: 
+    
+ RunMode mode = RunMode::dontTerminate;   
 
  typedef int(*mainCallBack)(const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void*); 
  mainCallBack PaCallBack;
 
  typedef void (*miniCallBack)(const void*, void*, unsigned long,void*);
  static miniCallBack cbPtr;
+ 
+ typedef void (*floatCallBack)(const float*, float*, unsigned long,void*);
+ static floatCallBack floatCb;
  
  void (*streamFinished)(void*) = NULL;
  
@@ -129,15 +154,14 @@ private:
  unsigned int framesperbuffer = 0;
  unsigned int samplerate = 44100;
  bool runloop = false;
+ bool init = false;
  
-#ifdef C11
- std::thread t;
-#endif 
+//#ifdef C11
+// std::thread t;
+//#endif 
  
-public:    
-    
- enum RunMode {wait = 1, waitInThread = 2, runDontTerminate = 3, sleep = 4, waitForKey = 5 };
-
+public:
+ 
 Pa(mainCallBack func, void* data)
 {
       PaCallBack = func;
@@ -154,10 +178,26 @@ Pa(mainCallBack func, unsigned int samp, unsigned int frames, unsigned int inch,
       outchannels = outch;
 }
 
+Pa(floatCallBack func, void* data)
+{
+    floatCb = func; 
+    userDataType = data;
+}
+
+Pa(floatCallBack func, unsigned int samp, unsigned int frames, unsigned int inch, unsigned int outch, void *data)
+{
+      floatCb = func;
+      userDataType = data;
+      samplerate = samp;
+      framesperbuffer = frames;
+      inchannels = inch;
+      outchannels = outch; 
+}
+
 Pa(miniCallBack func, void* data)
 {
       cbPtr = func;
-      userDataType = data;            
+      userDataType = data;   
 }
 
 Pa(miniCallBack func, unsigned int samp, unsigned int frames, unsigned int inch, unsigned int outch, void *data)
@@ -167,13 +207,63 @@ Pa(miniCallBack func, unsigned int samp, unsigned int frames, unsigned int inch,
       samplerate = samp;
       framesperbuffer = frames;
       inchannels = inch;
-      outchannels = outch;            
+      outchannels = outch; 
 }
- 
-private:
-    
-void startStream(Pa::RunMode mode){
 
+
+private:
+
+void restart(Pa::RunMode mode){
+    
+if(!Pa_IsStreamStopped(stream)){
+    return;
+}
+    PaError err = 0;
+    
+    err = Pa_StartStream( stream );
+    
+    if( err != paNoError ) goto error;
+    
+         if(mode == RunMode::wait){ 
+            runloop = true;
+            while(runloop){
+            Pa_Sleep(100);
+            } 
+       }
+       
+       if(mode == RunMode::sleep){
+           Pa_Sleep(sleepTime);
+       }
+       
+       if(mode == RunMode::waitForKey){
+           printf("\nPress any key stop stream:\n");
+           fflush(stdout);
+           getchar();
+       }
+    
+
+       if(mode != RunMode::dontTerminate){
+        err = Pa_StopStream( stream );  
+        if( err != paNoError ) goto error;
+       }
+    
+    return;  
+    
+    error:               
+    Pa_Terminate();
+    fprintf( stderr, "An error occured while using the portaudio stream\n" );
+    fprintf( stderr, "Error number: %d\n", err );
+    fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
+    fflush(stdout);
+}    
+
+void startStream(Pa::RunMode mode){
+    
+    if(init){
+        restart(mode);
+        return;
+    }
+    
     PaError err;
     PaStreamParameters outputParameters;   
     PaStreamParameters inputParameters;
@@ -214,15 +304,27 @@ void startStream(Pa::RunMode mode){
                samplerate,
                framesperbuffer,
                paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-               (cbPtr == NULL ? PaCallBack : &Pa::paCb),
+           //    (cbPtr == NULL ? PaCallBack : &Pa::paCb),
+              &Pa::paCb,
                userDataType );
      
        if( err != paNoError ) goto error;
+      
+       if(streamFinished != NULL){   
+        err = Pa_SetStreamFinishedCallback( stream, streamFinished );
+        if( err != paNoError ) goto error;
+       }
+   
+       init = true;
      
        err = Pa_StartStream( stream );
        if( err != paNoError ) goto error;
        
-       if(mode == RunMode::wait || mode == RunMode::waitInThread){
+//       printf("Run Mode: %i\n", mode);
+//       fflush(stdout);
+       
+   //    if(mode == RunMode::wait || mode == RunMode::waitInThread){ 
+         if(mode == RunMode::wait){ 
             runloop = true;
             while(runloop){
             Pa_Sleep(100);
@@ -240,10 +342,13 @@ void startStream(Pa::RunMode mode){
        }
     
 
-       if(mode != RunMode::runDontTerminate){
-       Pa_StopStream( stream );  //needed?    
-       Pa_Terminate();
+       if(mode != RunMode::dontTerminate){
+        err = Pa_StopStream( stream );  
+        if( err != paNoError ) goto error;
        }
+       
+//       printf("\nstream: %i\n", Pa_IsStreamStopped(stream));
+//       fflush(stdout);
        
      return;
        
@@ -262,66 +367,54 @@ static PaError paCb(const void *inputBuffer, void *outputBuffer,
                         PaStreamCallbackFlags statusFlags,
                         void* udata){
      
-     cbPtr(inputBuffer, outputBuffer, framesPerBuffer, udata);
+ 
+    if(cbPtr == NULL){
+        floatCb((const float*)inputBuffer, (float*)outputBuffer, framesPerBuffer, udata);
+    }else{
+        cbPtr(inputBuffer, outputBuffer, framesPerBuffer, udata);   
+    }
     
      return paContinue;
      
  }
 
 public:
-  /*
- 
-run infinite : void  - wait 1
-run in thread : true - waitInThread 2
-run, don't terminate : false - runDontTerminate 3
-sleep : +int  - sleep 4
-wait for key : -int waitForKey 5
- 
-  * run(void)
-  * run(true)
-  * run(false)
-  * run(int)
-  * run(-int)
-  * run(mode)
-  
-  */   
+    
+
  void start(){
-    startStream(RunMode::wait); 
+//    if(mode == RunMode::waitInThread){
+//        #ifdef C11
+//         t = std::thread(&Pa::startStream, this, mode);
+//        #else
+//         startStream(mode);
+//        #endif    
+//    }else{
+//        startStream(mode); 
+//    } 
+     startStream(mode); 
+ }
+
+ void start(RunMode mode){
+     this->mode = mode;
+     startStream(this->mode);
  }
  
- void start(bool in){
-     if(in){
-        #ifdef C11
-         t = std::thread(&Pa::startStream, this, RunMode::waitInThread);
-        #else
-         startStream(runMode::wait);
-        #endif
-     }else{
-         startStream(RunMode::runDontTerminate);
-     }
+ void start(unsigned long sleeptime){
+    this->sleepTime = sleeptime;
+    mode = RunMode::sleep;
+    startStream(mode);   
  }
  
- void start(long in){
-     if(in < 0){
-         startStream(RunMode::waitForKey);
-     }else{
-         sleepTime = in;
-         startStream(RunMode::sleep);
-     }
- }
- 
- void start(RunMode runmode){
-     if(runmode == RunMode::waitInThread){
-        #ifdef C11
-         t = std::thread(&Pa::startStream, this, RunMode::waitInThread);
-        #else
-         startStream(runMode::wait);
-        #endif   
-     }else{
-        startStream(runmode); 
-     }   
- }
+// void start(bool wait){ //ambiguous w long parameter needs template..
+//  mode = wait? RunMode::wait : RunMode::dontTerminate;
+//  startStream(mode);
+// }
   
+ 
+// void setRunMode(RunMode in){ 
+//     mode = in;
+// }
+      
  void setSleepTime(unsigned long time){
      sleepTime = time;
  }
@@ -329,19 +422,24 @@ wait for key : -int waitForKey 5
  void setSampleFormat(PaSampleFormat format){
      sampleFormat = format;
  }
+ 
+ ~Pa(){
+     Pa_Terminate();
+ }
 
  void stop(){
      runloop = false;
-    #ifdef C11
-     t.join();
-    #endif 
-     PaError err;
+//    #ifdef C11
+//     t.join();
+//    #endif 
+     PaError err = 0;
+     
+     if(!Pa_IsStreamStopped(stream))
      err = Pa_StopStream( stream );
      
      if( err !=  paNoError)  
          goto error;
      
-     Pa_Terminate();
      return;
      
      error:               
@@ -353,12 +451,49 @@ wait for key : -int waitForKey 5
      
  }
  
+void stop(bool in){
+     runloop = false;
+//    #ifdef C11
+//     t.join();
+//    #endif 
+     PaError err = 0;
+     
+     if(!Pa_IsStreamStopped(stream))
+     err = Pa_StopStream( stream );
+     
+       if(in){
+       err = Pa_CloseStream( stream );
+       init = false;
+       if( err != paNoError ) goto error;
+       }
+     
+     if( err !=  paNoError)  
+         goto error;
+     
+     return;
+     
+     error:               
+     Pa_Terminate();
+     fprintf( stderr, "An errooor occured while using the portaudio stream\n" );
+     fprintf( stderr, "Error number: %d\n", err );
+     fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );    
+     fflush(stdout);
+     
+ }
+
 void setFinishedCallBack(void(&func)(void* a)){
- 
+    streamFinished = func;
 }
+
   
 };
 Pa::miniCallBack Pa::cbPtr = NULL;
+Pa::floatCallBack Pa::floatCb = NULL;
+
+void streamFinished(void* in){
+    printf("\nstream finished\n");
+    fflush(stdout);
+}
 
 int main(void)
 {
@@ -369,26 +504,46 @@ int main(void)
     Osc osc(table, 2048, 78, 44100);
 
     //  Pa a(patestCallback, &osc);
-        Pa a(miniFunc, &osc);
+    //    Pa a(floatFunc, &osc);
+    Pa a(miniFunc, 44100, 0, 0, 1, &osc);
+    
+      //  a.setFinishedCallBack(streamFinished);
 
    // Pa a(patestCallback, 44100, 0, 0, 1, &osc);
 
-   
-    a.start(true);
+        
+  //  a.start(5000);
+//    a.start(Pa::dontTerminate);
+//    getchar();
+//    
+//    a.stop(true);
+//    
+//    getchar();
+//    
+//    a.start(2000);
     
-    while(aa < 999999999){
-        aa++;
-        if(aa%100000 == 0){
-            printf("sdsdf");
-        }
-    }
-   // while(true){}
-    a.stop();   /////////fix.....
-        while(aa > 0){
-        aa--;
-        if(aa%100000 == 0){
-            printf("vcxvcx");
-        }
-    }
+     a.start(Pa::wait);
+    
+//    printf("restart char1:...\n");
+//    fflush(stdout);
+//    getchar();
+    
+   // getchar();
+    
+    
+   // a.stop(true);
+   // a.start(3000);
+    
+//    a.stop();
+//    
+//    printf("restart char2:...\n");
+//    fflush(stdout);
+//    getchar();
+//    
+//    a.start(Pa::waitForKey);
+    
+    
+    
+
 
 }
