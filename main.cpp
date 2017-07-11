@@ -304,8 +304,7 @@ void startStream(Pa::RunMode mode){
                samplerate,
                framesperbuffer,
                paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-           //    (cbPtr == NULL ? PaCallBack : &Pa::paCb),
-              &Pa::paCb,
+               ((floatCb != NULL || cbPtr != NULL) ? &Pa::paCb : PaCallBack),
                userDataType );
      
        if( err != paNoError ) goto error;
