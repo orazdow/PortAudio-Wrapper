@@ -13,13 +13,10 @@ class Osc{
 public:
 float freq;
 float phase = 0; 
-float p1 = 0, p2 = 0, p3 = 0, p4 = 0;
-float step = 5;
+float step;
 float* table;
 int tsize;
 int srate;
-float s1, s2, s3, s4;
-float a = 1, a1 = 0.8, a2 = 0.7, a3 = 0.6, a4 = 0.5;
 
 Osc(float* table, int tsize, float freq, int srate){
     this->freq = freq;
@@ -27,38 +24,33 @@ Osc(float* table, int tsize, float freq, int srate){
     this->tsize = tsize;
     this->srate = srate;   
     this->step = freq*(float)tsize/(float)srate;
-    this->s1 = freq*2*(float)tsize/(float)srate;
-    s2 = freq*3*(float)tsize/(float)srate;
-    s3 = freq*5*(float)tsize/(float)srate;
-    s4 = freq*7*(float)tsize/(float)srate;
-
 }    
 float inc(){
-//    phase += step;
-//    if(phase >= tsize){ phase -= tsize; }
-//    return table[(int)phase];
-    float out =  incp(phase,step, a)+incp(p1, s1, a1)+incp(p2, s2, a2)+incp(p3, s3, a3)+incp(p4, s4, a4);
-    return out/4.0;
-}
-
-float incp(float &p, float &s, float &amp){
-    p += s;
-    if(p >= tsize){ p -= tsize; }
-    return table[(int)p]*amp;
+    phase += step;
+    if(phase >= tsize){ phase -= tsize; }
+    return table[(int)phase];
 }
       
 };
 
+struct Bank{
+    
+Osc o1, o2;
 
+Bank(Osc a, Osc b) : o1(a), o2(b){}
+    
+};
 
 void minifunc(const float* in, float* out, unsigned long frames, void* data){
     
            
-    Osc *o = (Osc*)data;
+    Bank *b = (Bank*)data;
     
     for(unsigned long i=0; i< frames; i++ ){
          
-         *out = o->inc();       
+        *out = b->o1.inc();
+          out++;
+        *out = b->o2.inc();
           out++;
      }
     
@@ -66,16 +58,20 @@ void minifunc(const float* in, float* out, unsigned long frames, void* data){
 }
 
 
+
 int main(){
         
     float table[2048];
     initTable(table,2048);
     
-    Osc osc(table, 2048, 78, 44100);
+    Osc osc1(table, 2048, 158, 44100);
+    Osc osc2(table, 2048, 288, 44100);
     
-    Pa a(minifunc, &osc);
+    Bank OscBank(osc1, osc2);
+    
+    Pa a(minifunc, 0, 2, 44100, 0, &OscBank);
 
     a.start(Pa::waitForKey);
-    
+       
     return 0;
 }
