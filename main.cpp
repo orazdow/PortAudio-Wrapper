@@ -1,56 +1,65 @@
 #include "Pa.h"
 #include <math.h>
 
-#define TAU 6.2831853
+#define tau 6.2831853
+#define sample_rate 44100
 
-void initTable(float table[], int size){
-    for(int i = 0; i < size; i++){
-        table[i] = sin(TAU*(i/(float)size));
-    }
-}
 
-class Osc{
-public:
-float freq;
-float phase = 0; 
-float step;
-float* table;
-int tsize;
-int srate;
+class Oscs{
 
-Osc(float* table, int tsize, float freq, int srate){
-    this->freq = freq;
-    this->table = table;
-    this->tsize = tsize;
-    this->srate = srate;   
-    this->step = freq*(float)tsize/(float)srate;
-}    
-float inc(){
+public:    
+    
+float  p1, p2, p3, p4, // phase
+       s1, s2, s3, s4, // step
+       a1, a2, a3, a4; // amplitude 
+
+float lfophase = 0;
+
+//float mod = 0;  // <<<<<<<<<<<<< uncommenting this breaks it....?
+
+
+
+
+
+
+
+Oscs(float f1, float a1, float f2, float a2, float f3, float a3, float f4, float a4){
+     s1 = tau*f1/sample_rate;  this->a1 = a1;
+     s2 = tau*f2/sample_rate;  this->a2 = a2;
+     s3 = tau*f3/sample_rate;  this->a3 = a3;
+     s4 = tau*f4/sample_rate;  this->a4 = a4; 
+ }  
+ 
+    
+float inc(float &phase, float step, float amp){
     phase += step;
-    if(phase >= tsize){ phase -= tsize; }
-    return table[(int)phase];
+    if(phase > tau){ phase -= tau; }
+    return sinf(phase)*amp;
+} 
+
+float sum(){
+    float mod = inc(lfophase, 0.00004, 0.006);
+    return (inc(p1, s1, a1)+inc(p2, s2+mod, a2)+inc(p3, s3, a3)+inc(p4, s4+mod, a4))*0.3;
 }
-      
+   
 };
 
-struct Bank{
-    
-Osc o1, o2;
-
-Bank(Osc a, Osc b) : o1(a), o2(b){}
-    
-};
+//struct Bank{
+//    
+//Osc o1, o2;
+//
+//Bank(Osc a, Osc b) : o1(a), o2(b){}
+//    
+//};
 
 void minifunc(const float* in, float* out, unsigned long frames, void* data){
     
            
-    Bank *b = (Bank*)data;
+    Oscs *o = (Oscs*)data;
     
     for(unsigned long i=0; i< frames; i++ ){
          
-        *out = b->o1.inc();
-          out++;
-        *out = b->o2.inc();
+         *out = o->sum();
           out++;
      }
     
@@ -60,16 +69,12 @@ void minifunc(const float* in, float* out, unsigned long frames, void* data){
 
 
 int main(){
-        
-    float table[2048];
-    initTable(table,2048);
+
+
+    Oscs o(340, 1, 400, 0.8, 230, 0.5, 380, 0.6);
     
-    Osc osc1(table, 2048, 158, 44100);
-    Osc osc2(table, 2048, 288, 44100);
-    
-    Bank OscBank(osc1, osc2);
-    
-    Pa a(minifunc, 0, 2, 44100, 0, &OscBank);
+    //constructor parapms: input channels, output channels, sampling rate, buffer size (0 = auto), user data reference
+    Pa a(minifunc, 0, 1, sample_rate, 0, &o);
 
     a.start(Pa::waitForKey);
        
