@@ -72,11 +72,11 @@ Oscs o;
 
 int main(){
 
-  //  Oscs oo;
+  //  Oscs o;
    
     Pa a(minifunc, &o);
-   // a.setFinishedCallBack(streamFinished); 
-
+    a.setFinishedCallBack(streamFinished); 
+    
     a.start(Pa::waitForKey);
     printf("done");   
     return 0;

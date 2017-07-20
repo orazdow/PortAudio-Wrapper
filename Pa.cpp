@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "Pa.h"
 
 Pa::miniCallBack Pa::miniCb = NULL;
@@ -5,6 +7,7 @@ Pa::miniCallBack Pa::miniCb = NULL;
 Pa::Pa(mainCallBack func, void* data){    
     PaCallBack = func;
     userDataType = data;
+    intialize();
 }
 Pa::Pa(mainCallBack func,unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, void *data){    
     PaCallBack = func;
@@ -13,10 +16,12 @@ Pa::Pa(mainCallBack func,unsigned int inch, unsigned int outch, unsigned int sam
     framesperbuffer = frames;
     inchannels = inch;
     outchannels = outch;
+    intialize();
 }
 Pa::Pa(miniCallBack func, void* data){
     miniCb = func; 
     userDataType = data;
+    intialize();
 }
 Pa::Pa(miniCallBack func,  unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, void *data){
     miniCb = func;
@@ -25,6 +30,7 @@ Pa::Pa(miniCallBack func,  unsigned int inch, unsigned int outch, unsigned int s
     framesperbuffer = frames;
     inchannels = inch;
     outchannels = outch; 
+    intialize();
 }
 
 Pa::~Pa(){
@@ -55,14 +61,14 @@ void Pa::startStream(Pa::RunMode mode){
     PaStreamParameters outputParameters;   
     PaStreamParameters inputParameters;
     
-    
-     err = Pa_Initialize();
-     if( err != paNoError ) goto error;
-
     if(outchannels > 0){
-        outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+        if( outputdevice < 0){
+            outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
+        }else{
+            outputParameters.device = outputdevice;    
+        }
        if (outputParameters.device == paNoDevice) {
-         fprintf(stderr,"Error: No default output device.\n");
+         fprintf(stderr,"\nError: No default output device.\n");
          goto error;
        }
         outputParameters.channelCount = outchannels;      
@@ -72,9 +78,13 @@ void Pa::startStream(Pa::RunMode mode){
     }
      
     if(inchannels > 0){ 
-        inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
+        if( inputdevice < 0){
+            inputParameters.device = Pa_GetDefaultInputDevice(); /* default input device */
+        }else{
+            inputParameters.device = inputdevice;
+        }
         if (inputParameters.device == paNoDevice) {
-          fprintf(stderr,"Error: No default input device.\n");
+          fprintf(stderr,"\nError: No default input device.\n");
           goto error;
         }
         inputParameters.channelCount = inchannels;  
@@ -136,10 +146,22 @@ void Pa::startStream(Pa::RunMode mode){
        
      error:               
      Pa_Terminate();
-     fprintf( stderr, "An error occured while using the portaudio stream\n" );
+     fprintf( stderr, "\nAn error occured while using the portaudio stream\n" );
      fprintf( stderr, "Error number: %d\n", err );
      fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
      fflush(stdout); 
+}
+
+void Pa::intialize(){
+     PaError err;
+     err = Pa_Initialize();
+     if( err != paNoError ){  
+        fprintf( stderr, "\nAn error occured initializing portaudio\n" );
+        fprintf( stderr, "Error number: %d\n", err );
+        fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );    
+        fflush(stdout); 
+        Pa_Terminate();
+     }
 }
 
 void Pa::restart(Pa::RunMode mode){
@@ -180,10 +202,10 @@ if(!Pa_IsStreamStopped(stream)){
     
     error:               
     Pa_Terminate();
-    fprintf( stderr, "An error occured while using the portaudio stream\n" );
-    fprintf( stderr, "Error number: %d\n", err );
-    fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );
-    fflush(stdout);  
+    fprintf( stderr, "\nAn error occured while using the portaudio stream\n" );
+
+     err = Pa_Initialize();
+     if( err != paNoError ) goto error;  
 } 
 
 void Pa::stop(){
@@ -201,7 +223,7 @@ void Pa::stop(){
      
      error:               
      Pa_Terminate();
-     fprintf( stderr, "An errooor occured while using the portaudio stream\n" );
+     fprintf( stderr, "\nAn error occured while using the portaudio stream\n" );
      fprintf( stderr, "Error number: %d\n", err );
      fprintf( stderr, "Error message: %s\n", Pa_GetErrorText( err ) );    
      fflush(stdout); 
@@ -234,6 +256,99 @@ void Pa::stop(bool close){
      fflush(stdout);  
 }
 
+void Pa::listDevices(){
+  const PaDeviceInfo *info;
+  int numdevices = 0;
+  numdevices = Pa_GetDeviceCount();
+  int defaultin = -1, defaultout = -1;
+  
+  if(numdevices <= 0){
+      printf("no devices found\n");
+      return;
+  }
+  defaultin = Pa_GetDefaultInputDevice();
+  defaultout = Pa_GetDefaultOutputDevice();
+  if(defaultin == paNoDevice){ defaultin = -1;}
+  if(defaultout == paNoDevice){ defaultout = -1;}
+  printf("Devices:\n");
+  for (int i = 0; i < numdevices; i++) {
+      
+      info = Pa_GetDeviceInfo(i);
+      
+          const char* inout = "";
+          if(info->maxInputChannels > 0 && info->maxOutputChannels == 0){
+              inout = "input";
+          }else if(info->maxInputChannels == 0 && info->maxOutputChannels > 0){
+              inout = "output";
+          }
+          
+      if(i == defaultin || i == defaultout){
+
+          printf("%i: (%s) %s (%s) --default--\n", i, inout, info->name, apiName(info->hostApi));
+      
+      }    
+      else{
+         printf("%i: (%s) %s (%s)\n", i, inout, info->name, apiName(info->hostApi));
+       
+      }
+    }
+
+}
+
+void Pa::getDeviceInfo(unsigned int index){
+  const PaDeviceInfo *info;
+  int numdevices = 0;
+  numdevices = Pa_GetDeviceCount();
+  int defaultin = -1, defaultout = -1;
+  
+  if(numdevices <= 0){
+      printf("no devices found\n");
+      return;
+  }
+  if(index >= numdevices ){
+      printf("invalid index\n");
+      return;     
+  }
+  
+  info = Pa_GetDeviceInfo(index);
+  printf("\nDevice: (%u)\n", index);
+  printf("%s\n", info->name);
+  printf("API: %s\n", apiName(info->hostApi));
+  printf("Input channels: %i\n", info->maxInputChannels);
+  printf("Output channels: %i\n", info->maxOutputChannels);
+  printf("Default high input latency: %f\n", info->defaultHighInputLatency);
+  printf("Default high output latency: %f\n", info->defaultHighOutputLatency);
+  printf("Default low input latency: %f\n", info->defaultLowInputLatency);
+  printf("Default low input latency: %f\n", info->defaultLowOutputLatency);
+  printf("Default sampling rate: %f\n", info->defaultSampleRate);
+
+}
+
+
+const char* Pa::apiName(unsigned int index){
+    
+    const PaHostApiInfo* info;
+    int hostindex = -1;
+    int apicount = 0;
+    int defaultapi = -1;
+    
+        apicount =  Pa_GetHostApiCount();
+        hostindex = Pa_GetDefaultHostApi();
+        defaultapi = Pa_GetDefaultHostApi();
+        
+        if(apicount <= 0){
+            return "";
+        }
+        if(index > apicount-1){
+            return "";
+        }
+    
+        info =  Pa_GetHostApiInfo(index);
+        
+        return info->name;
+    
+}
+
 void Pa::setSleepTime(unsigned long time){
      sleepTime = time;
 }
@@ -242,6 +357,54 @@ void Pa::setSampleFormat(PaSampleFormat format){
 }
 void Pa::setFinishedCallBack(void(*func)(void* data)){
     streamFinished = func;
+}
+
+void Pa::setInputDevice(unsigned int index){
+    int numdevices = 0;
+    numdevices = Pa_GetDeviceCount(); 
+    if(numdevices == 0){
+        printf("\nNo devices found\n"); 
+        return;
+    }
+    if(index >= numdevices){
+        printf("\nInvalid index\n"); 
+        return;        
+    }
+    const PaDeviceInfo* info = Pa_GetDeviceInfo(index);
+    if(info == NULL){
+         printf("\nNInvalid index\n"); 
+        return;       
+    }
+    if(info->maxInputChannels == 0){
+         printf("\nInvalid index\n"); 
+        return;       
+    }
+    inputdevice = index;
+    printf("\nInput device set to: %u: %s\n", index, info->name);
+}
+
+void Pa::setOutputDevice(unsigned int index){
+    int numdevices = 0;
+    numdevices = Pa_GetDeviceCount(); 
+    if(numdevices == 0){
+        printf("\nNo devices found\n"); 
+        return;
+    }
+    if(index >= numdevices){
+        printf("\nInvalid index\n"); 
+        return;        
+    }
+    const PaDeviceInfo* info = Pa_GetDeviceInfo(index);
+    if(info == NULL){
+         printf("\nNInvalid index\n"); 
+        return;       
+    }
+    if(info->maxOutputChannels == 0){
+         printf("\nInvalid index\n"); 
+        return;       
+    }
+    outputdevice = index; 
+    printf("\nOutput device set to: %u: %s\n", index, info->name);
 }
 
 PaError Pa::paCb(const void *inputBuffer, void *outputBuffer,

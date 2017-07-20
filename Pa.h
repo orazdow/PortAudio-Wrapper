@@ -3,6 +3,7 @@
 #define PA_H
 
 #include <stdio.h>
+#include <string>
 #include "portaudio.h"
 
 class Pa{
@@ -31,11 +32,15 @@ unsigned int inchannels = 0;
 unsigned int outchannels = 1;
 unsigned int framesperbuffer = 0;
 unsigned int samplerate = 44100;
+int inputdevice = -1;
+int outputdevice = -1;
 bool runloop = false;
 bool init = false; 
  
  void startStream(Pa::RunMode mode);
  void restart(Pa::RunMode mode);
+ void intialize();
+const char* apiName(unsigned int index);
 
  static PaError paCb(const void *inputBuffer, void *outputBuffer,
                         unsigned long framesPerBuffer,
@@ -59,7 +64,11 @@ void stop();
 void stop(bool close);
 void setSleepTime(unsigned long time); 
 void setSampleFormat(PaSampleFormat format);
-void setFinishedCallBack(void(*func)(void* data));    
+void setFinishedCallBack(void(*func)(void* data));   
+void listDevices();
+void getDeviceInfo(unsigned int index);
+void setInputDevice(unsigned int index);
+void setOutputDevice(unsigned int index);
 
 };
 
