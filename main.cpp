@@ -5,78 +5,80 @@
 #define sample_rate 44100
 
 
+typedef struct{
+
+  double phase = 0;
+  double step = 0;
+  float amp = 1; 
+  
+  void set(float f, float a){
+      step = tau*f/sample_rate;
+      amp = a;
+  }
+  
+  double inc(){
+      phase += step;
+      if(step >= tau){ phase -= tau; }
+      return sin(phase)*amp;
+  }
+    
+}Osc;
+
 class Oscs{
 
-public:    
+public:  
     
-float  p1, p2, p3, p4, // phase
-       s1, s2, s3, s4, // step
-       a1, a2, a3, a4; // amplitude 
+    Osc oscs[40];
 
-float lfophase = 0;
+    Oscs(){
 
-//float mod = 0;  // <<<<<<<<<<<<< uncommenting this breaks it....?
+        for (int i = 0; i < 40; i++){
+            oscs[i].set( 50+40*pow(2, ((40+i)/16.0))  , (float)i/20.0);
+        }
 
+    }
 
-
-
-
-
-
-Oscs(float f1, float a1, float f2, float a2, float f3, float a3, float f4, float a4){
-     s1 = tau*f1/sample_rate;  this->a1 = a1;
-     s2 = tau*f2/sample_rate;  this->a2 = a2;
-     s3 = tau*f3/sample_rate;  this->a3 = a3;
-     s4 = tau*f4/sample_rate;  this->a4 = a4; 
- }  
- 
-    
-float inc(float &phase, float step, float amp){
-    phase += step;
-    if(phase > tau){ phase -= tau; }
-    return sinf(phase)*amp;
-} 
-
-float sum(){
-    float mod = inc(lfophase, 0.00004, 0.006);
-    return (inc(p1, s1, a1)+inc(p2, s2+mod, a2)+inc(p3, s3, a3)+inc(p4, s4+mod, a4))*0.3;
-}
-   
+    float sum(){
+        double sum = 0;
+        for (int i = 0; i < 40; i++) {
+            sum += oscs[i].inc();
+            }
+        return sum/40.0;   
+    }
+     
 };
 
-//struct Bank{
-//    
-//Osc o1, o2;
-//
-//Bank(Osc a, Osc b) : o1(a), o2(b){}
-//    
-//};
+
 
 void minifunc(const float* in, float* out, unsigned long frames, void* data){
     
            
-    Oscs *o = (Oscs*)data;
+     Oscs *o = (Oscs*)data;
     
     for(unsigned long i=0; i< frames; i++ ){
+
+         *out++ = o->sum();
          
-         *out = o->sum();
-          out++;
      }
-    
-    
+       
 }
 
+void streamFinished(void* data){
+    Oscs *o = (Oscs*)data;
+    o->~Oscs(); 
+}
 
+Oscs o;
 
 int main(){
 
-
-    Oscs o(340, 1, 400, 0.8, 230, 0.5, 380, 0.6);
-    
-    //constructor parapms: input channels, output channels, sampling rate, buffer size (0 = auto), user data reference
-    Pa a(minifunc, 0, 1, sample_rate, 0, &o);
+  //  Oscs oo;
+   
+    Pa a(minifunc, &o);
+   // a.setFinishedCallBack(streamFinished); 
 
     a.start(Pa::waitForKey);
-       
+    printf("done");   
     return 0;
 }
+
