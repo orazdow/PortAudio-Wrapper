@@ -1,10 +1,9 @@
-
 #ifndef PA_H
 #define PA_H
 
 #include <stdio.h>
-#include <string>
 #include "portaudio.h"
+//#include <memory>
 
 class Pa{
     
@@ -17,14 +16,13 @@ private:
 RunMode mode = RunMode::dontTerminate;   
 
 typedef int(*mainCallBack)(const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void*); 
-mainCallBack PaCallBack;
+mainCallBack PaCallBack = nullptr;
 
 typedef void (*miniCallBack)(const float*, float*, unsigned long,void*);
 static miniCallBack miniCb;
  
-void (*streamFinished)(void*);
-
-void* userDataType;
+void (*streamFinished)(void*) = nullptr;
+void* userDataType = NULL;
 PaStream *stream;
 PaSampleFormat sampleFormat = paFloat32;
 unsigned long sleepTime = 10000;
@@ -36,10 +34,14 @@ int inputdevice = -1;
 int outputdevice = -1;
 bool runloop = false;
 bool init = false; 
+
+/*-------------*/
+//std::shared_ptr<void> s_ptr;
+/*-------------*/
  
- void startStream(Pa::RunMode mode);
- void restart(Pa::RunMode mode);
- void intialize();
+void startStream(Pa::RunMode mode);
+void restart(Pa::RunMode mode);
+void intialize();
 const char* apiName(unsigned int index);
 
  static PaError paCb(const void *inputBuffer, void *outputBuffer,
@@ -54,7 +56,9 @@ Pa(mainCallBack func, void* data);
 Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames,  void *data);
 Pa(miniCallBack func, void* data);
 Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames,  void *data);
-
+/*-------------*/
+//Pa(miniCallBack func, std::shared_ptr<void> data);
+/*-------------*/
 ~Pa();
 
 void start();

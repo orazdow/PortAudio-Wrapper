@@ -65,17 +65,16 @@ void minifunc(const float* in, float* out, unsigned long frames, void* data){
 
 void streamFinished(void* data){
     Oscs *o = (Oscs*)data;
-    o->~Oscs(); 
+    delete o;
 }
 
-Oscs o;
+//Oscs* o = new Oscs;
 
 int main(){
 
-  //  Oscs o;
-   
+    Oscs o;
     Pa a(minifunc, &o);
-    a.setFinishedCallBack(streamFinished); 
+  //  a.setFinishedCallBack(streamFinished); 
     
     a.start(Pa::waitForKey);
     printf("done");   

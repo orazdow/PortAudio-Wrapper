@@ -1,8 +1,7 @@
-#include <iostream>
 
 #include "Pa.h"
 
-Pa::miniCallBack Pa::miniCb = NULL;
+Pa::miniCallBack Pa::miniCb;
 
 Pa::Pa(mainCallBack func, void* data){    
     PaCallBack = func;
@@ -32,6 +31,15 @@ Pa::Pa(miniCallBack func,  unsigned int inch, unsigned int outch, unsigned int s
     outchannels = outch; 
     intialize();
 }
+
+/*-------------*/
+//Pa::Pa(miniCallBack func, std::shared_ptr<void> data){
+//    miniCb = func; 
+//    s_ptr = data;
+//    userDataType = data.get();
+//    intialize();
+//}
+/*-------------*/
 
 Pa::~Pa(){
      Pa_Terminate();
@@ -93,7 +101,6 @@ void Pa::startStream(Pa::RunMode mode){
         inputParameters.hostApiSpecificStreamInfo = NULL;
     }
      
-     
       err = Pa_OpenStream(
                &stream,
                (inchannels > 0 ? &inputParameters : NULL), 
@@ -101,12 +108,12 @@ void Pa::startStream(Pa::RunMode mode){
                samplerate,
                framesperbuffer,
                paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-               (miniCb == NULL ? PaCallBack : &Pa::paCb),
+               (miniCb == nullptr ? PaCallBack : &Pa::paCb),
                userDataType );
      
        if( err != paNoError ) goto error;
       
-       if(streamFinished != NULL){   
+       if(streamFinished != nullptr){  
         err = Pa_SetStreamFinishedCallback( stream, streamFinished );
         if( err != paNoError ) goto error;
        }
@@ -166,9 +173,10 @@ void Pa::intialize(){
 
 void Pa::restart(Pa::RunMode mode){
     
-if(!Pa_IsStreamStopped(stream)){
-    return;
-}
+    if(!Pa_IsStreamStopped(stream)){
+        return;
+    }
+    
     PaError err = 0;
     
     err = Pa_StartStream( stream );
@@ -256,6 +264,75 @@ void Pa::stop(bool close){
      fflush(stdout);  
 }
 
+PaError Pa::paCb(const void *inputBuffer, void *outputBuffer,
+                        unsigned long framesPerBuffer,
+                        const PaStreamCallbackTimeInfo* timeInfo,
+                        PaStreamCallbackFlags statusFlags,
+                        void* udata){
+    
+    miniCb((const float*)inputBuffer, (float*)outputBuffer, framesPerBuffer, udata );
+    
+    return paContinue;
+}
+
+void Pa::setSleepTime(unsigned long time){
+     sleepTime = time;
+}
+void Pa::setSampleFormat(PaSampleFormat format){
+     sampleFormat = format;
+}
+void Pa::setFinishedCallBack(void(*func)(void* data)){
+    streamFinished = func;
+}
+
+void Pa::setInputDevice(unsigned int index){
+    int numdevices = 0;
+    numdevices = Pa_GetDeviceCount(); 
+    if(numdevices == 0){
+        printf("\nNo devices found\n"); 
+        return;
+    }
+    if(index >= numdevices){
+        printf("\nInvalid index\n"); 
+        return;        
+    }
+    const PaDeviceInfo* info = Pa_GetDeviceInfo(index);
+    if(info == NULL){
+         printf("\nNInvalid index\n"); 
+        return;       
+    }
+    if(info->maxInputChannels == 0){
+         printf("\nInvalid index\n"); 
+        return;       
+    }
+    inputdevice = index;
+    printf("\nInput device set to: %u: %s\n", index, info->name);
+}
+
+void Pa::setOutputDevice(unsigned int index){
+    int numdevices = 0;
+    numdevices = Pa_GetDeviceCount(); 
+    if(numdevices == 0){
+        printf("\nNo devices found\n"); 
+        return;
+    }
+    if(index >= numdevices){
+        printf("\nInvalid index\n"); 
+        return;        
+    }
+    const PaDeviceInfo* info = Pa_GetDeviceInfo(index);
+    if(info == NULL){
+         printf("\nNInvalid index\n"); 
+        return;       
+    }
+    if(info->maxOutputChannels == 0){
+         printf("\nInvalid index\n"); 
+        return;       
+    }
+    outputdevice = index; 
+    printf("\nOutput device set to: %u: %s\n", index, info->name);
+}
+
 void Pa::listDevices(){
   const PaDeviceInfo *info;
   int numdevices = 0;
@@ -324,7 +401,6 @@ void Pa::getDeviceInfo(unsigned int index){
 
 }
 
-
 const char* Pa::apiName(unsigned int index){
     
     const PaHostApiInfo* info;
@@ -349,74 +425,7 @@ const char* Pa::apiName(unsigned int index){
     
 }
 
-void Pa::setSleepTime(unsigned long time){
-     sleepTime = time;
-}
-void Pa::setSampleFormat(PaSampleFormat format){
-     sampleFormat = format;
-}
-void Pa::setFinishedCallBack(void(*func)(void* data)){
-    streamFinished = func;
-}
 
-void Pa::setInputDevice(unsigned int index){
-    int numdevices = 0;
-    numdevices = Pa_GetDeviceCount(); 
-    if(numdevices == 0){
-        printf("\nNo devices found\n"); 
-        return;
-    }
-    if(index >= numdevices){
-        printf("\nInvalid index\n"); 
-        return;        
-    }
-    const PaDeviceInfo* info = Pa_GetDeviceInfo(index);
-    if(info == NULL){
-         printf("\nNInvalid index\n"); 
-        return;       
-    }
-    if(info->maxInputChannels == 0){
-         printf("\nInvalid index\n"); 
-        return;       
-    }
-    inputdevice = index;
-    printf("\nInput device set to: %u: %s\n", index, info->name);
-}
-
-void Pa::setOutputDevice(unsigned int index){
-    int numdevices = 0;
-    numdevices = Pa_GetDeviceCount(); 
-    if(numdevices == 0){
-        printf("\nNo devices found\n"); 
-        return;
-    }
-    if(index >= numdevices){
-        printf("\nInvalid index\n"); 
-        return;        
-    }
-    const PaDeviceInfo* info = Pa_GetDeviceInfo(index);
-    if(info == NULL){
-         printf("\nNInvalid index\n"); 
-        return;       
-    }
-    if(info->maxOutputChannels == 0){
-         printf("\nInvalid index\n"); 
-        return;       
-    }
-    outputdevice = index; 
-    printf("\nOutput device set to: %u: %s\n", index, info->name);
-}
-
-PaError Pa::paCb(const void *inputBuffer, void *outputBuffer,
-                        unsigned long framesPerBuffer,
-                        const PaStreamCallbackTimeInfo* timeInfo,
-                        PaStreamCallbackFlags statusFlags,
-                        void* udata){
-
-    miniCb((const float*)inputBuffer, (float*)outputBuffer, framesPerBuffer, udata);
-    
-    return paContinue;
-}
     
        
 
