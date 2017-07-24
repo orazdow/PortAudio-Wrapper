@@ -28,22 +28,26 @@ class Oscs{
 
 public:  
     
-    Osc oscs[40];
+    Osc oscs[55];
 
     Oscs(){
 
-        for (int i = 0; i < 40; i++){
-            oscs[i].set( 50+40*pow(2, ((40+i)/16.0))  , (float)i/20.0);
+        for (int i = 0; i < 55; i++){
+            oscs[i].set( 10+30*pow(2, ((40+i)/16.0))  , 1);
         }
 
     }
 
     float sum(){
         double sum = 0;
-        for (int i = 0; i < 40; i++) {
+        for (int i = 0; i < 55; i++) {
             sum += oscs[i].inc();
             }
-        return sum/40.0;   
+        return sum/55.0;   
+    }
+    
+    ~Oscs(){
+        printf("\nI'm ded\n");
     }
      
 };
@@ -68,12 +72,11 @@ void streamFinished(void* data){
     delete o;
 }
 
-//Oscs* o = new Oscs;
-
 int main(){
-
-    Oscs o;
-    Pa a(minifunc, &o);
+    Oscs* o = new Oscs;
+   // Oscs o;
+    
+    Pa a(minifunc, std::make_shared<Oscs>(*o));
   //  a.setFinishedCallBack(streamFinished); 
     
     a.start(Pa::waitForKey);

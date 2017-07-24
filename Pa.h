@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 #include "portaudio.h"
-//#include <memory>
+#include <memory>
 
 class Pa{
     
@@ -36,7 +36,7 @@ bool runloop = false;
 bool init = false; 
 
 /*-------------*/
-//std::shared_ptr<void> s_ptr;
+std::shared_ptr<void> s_ptr;
 /*-------------*/
  
 void startStream(Pa::RunMode mode);
@@ -57,7 +57,7 @@ Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, 
 Pa(miniCallBack func, void* data);
 Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames,  void *data);
 /*-------------*/
-//Pa(miniCallBack func, std::shared_ptr<void> data);
+Pa(miniCallBack func, std::shared_ptr<void> data);
 /*-------------*/
 ~Pa();
 

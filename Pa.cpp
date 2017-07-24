@@ -33,12 +33,12 @@ Pa::Pa(miniCallBack func,  unsigned int inch, unsigned int outch, unsigned int s
 }
 
 /*-------------*/
-//Pa::Pa(miniCallBack func, std::shared_ptr<void> data){
-//    miniCb = func; 
-//    s_ptr = data;
-//    userDataType = data.get();
-//    intialize();
-//}
+Pa::Pa(miniCallBack func, std::shared_ptr<void> data){
+    miniCb = func; 
+    s_ptr = data;
+    userDataType = data.get();
+    intialize();
+}
 /*-------------*/
 
 Pa::~Pa(){
