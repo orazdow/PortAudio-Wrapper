@@ -172,7 +172,7 @@ void Pa::startStream(Pa::RunMode mode){
          if(mode == RunMode::wait){ 
             runloop = true;
             while(runloop){
-           // Pa_Sleep(10);
+           // Pa_Sleep(50);
             } 
        }
        
@@ -232,7 +232,7 @@ void Pa::restart(Pa::RunMode mode){
          if(mode == RunMode::wait){ 
             runloop = true;
             while(runloop){
-            Pa_Sleep(100);
+          //  Pa_Sleep(50);
             } 
        }
        
