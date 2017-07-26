@@ -3,12 +3,16 @@
 
 Pa::miniCallBack Pa::miniCb;
 
+// constructors:
+
+// full callback, userdata
 Pa::Pa(mainCallBack func, void* data){    
     PaCallBack = func;
     userDataType = data;
     intialize();
-}
-Pa::Pa(mainCallBack func,unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, void *data){    
+} 
+// full callback, inchannels, outchannels, sampling rate, frames per buffer, userdata
+Pa::Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, void *data){    
     PaCallBack = func;
     userDataType = data;
     samplerate = samp;
@@ -17,12 +21,14 @@ Pa::Pa(mainCallBack func,unsigned int inch, unsigned int outch, unsigned int sam
     outchannels = outch;
     intialize();
 }
+// mini callback, userdata
 Pa::Pa(miniCallBack func, void* data){
     miniCb = func; 
     userDataType = data;
     intialize();
-}
-Pa::Pa(miniCallBack func,  unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, void *data){
+} 
+ //mini callback,  inchannels, outchannels, sampling rate, frames per buffer, userdata
+Pa::Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, void *data){
     miniCb = func;
     userDataType = data;
     samplerate = samp;
@@ -31,33 +37,68 @@ Pa::Pa(miniCallBack func,  unsigned int inch, unsigned int outch, unsigned int s
     outchannels = outch; 
     intialize();
 }
+// shared_ptr constructors:
+#ifdef CPP11 
+    // main callback
+    Pa::Pa(mainCallBack func, std::shared_ptr<void> data){    
+        PaCallBack = func;
+        s_ptr = data;
+        userDataType = s_ptr.get();
+        intialize();
+    } 
+    // main callback, params
+    Pa::Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, std::shared_ptr<void> data){    
+        PaCallBack = func;
+        s_ptr = data;
+        userDataType = s_ptr.get();
+        samplerate = samp;
+        framesperbuffer = frames;
+        inchannels = inch;
+        outchannels = outch;
+        intialize();
+    }
+    // mini callback
+    Pa::Pa(miniCallBack func, std::shared_ptr<void> data){
+        miniCb = func; 
+        s_ptr = data;
+        userDataType = s_ptr.get();
+        intialize();
+    } 
+    // mini callback, params
+    Pa::Pa(miniCallBack func,unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, std::shared_ptr<void> data){
+        miniCb = func;
+        s_ptr = data;
+        userDataType = s_ptr.get();
+        samplerate = samp;
+        framesperbuffer = frames;
+        inchannels = inch;
+        outchannels = outch; 
+        intialize();
+    }
+    #endif
 
-/*-------------*/
-Pa::Pa(miniCallBack func, std::shared_ptr<void> data){
-    miniCb = func; 
-    s_ptr = data;
-    userDataType = data.get();
-    intialize();
-}
-/*-------------*/
-
+// destructor
 Pa::~Pa(){
      Pa_Terminate();
 }
 
+// start (default: don't terminate)
 void Pa::start(){
      startStream(mode); 
 }
+// start (set mode)
 void Pa::start(RunMode mode){
      this->mode = mode;
      startStream(this->mode);
 }
+// start (sleeptime)
 void Pa::start(unsigned long sleeptime){
     this->sleepTime = sleeptime;
     mode = RunMode::sleep;
     startStream(mode);  
 }
 
+// main start function -private-
 void Pa::startStream(Pa::RunMode mode){
     
     if(init){
@@ -69,6 +110,7 @@ void Pa::startStream(Pa::RunMode mode){
     PaStreamParameters outputParameters;   
     PaStreamParameters inputParameters;
     
+    // -set parameters 
     if(outchannels > 0){
         if( outputdevice < 0){
             outputParameters.device = Pa_GetDefaultOutputDevice(); /* default output device */
@@ -100,7 +142,7 @@ void Pa::startStream(Pa::RunMode mode){
         inputParameters.suggestedLatency = Pa_GetDeviceInfo( inputParameters.device )->defaultLowInputLatency;
         inputParameters.hostApiSpecificStreamInfo = NULL;
     }
-     
+      // -open stream
       err = Pa_OpenStream(
                &stream,
                (inchannels > 0 ? &inputParameters : NULL), 
@@ -113,6 +155,7 @@ void Pa::startStream(Pa::RunMode mode){
      
        if( err != paNoError ) goto error;
       
+       // -if defined by user, set finished callback 
        if(streamFinished != nullptr){  
         err = Pa_SetStreamFinishedCallback( stream, streamFinished );
         if( err != paNoError ) goto error;
@@ -120,14 +163,16 @@ void Pa::startStream(Pa::RunMode mode){
    
        init = true;
      
+       // -start stream
        err = Pa_StartStream( stream );
        if( err != paNoError ) goto error;
 
        
+       // -keep-alive mode routines
          if(mode == RunMode::wait){ 
             runloop = true;
             while(runloop){
-            Pa_Sleep(100);
+           // Pa_Sleep(10);
             } 
        }
        
@@ -141,14 +186,13 @@ void Pa::startStream(Pa::RunMode mode){
            getchar();
        }
     
-
+      // -stop stream
        if(mode != RunMode::dontTerminate){
          err = Pa_StopStream( stream );  
         if( err != paNoError ) goto error;
          
        }
-
-       
+      
      return;
        
      error:               
@@ -159,6 +203,7 @@ void Pa::startStream(Pa::RunMode mode){
      fflush(stdout); 
 }
 
+// init -private-
 void Pa::intialize(){
      PaError err;
      err = Pa_Initialize();
@@ -171,6 +216,7 @@ void Pa::intialize(){
      }
 }
 
+// restart -private-
 void Pa::restart(Pa::RunMode mode){
     
     if(!Pa_IsStreamStopped(stream)){
@@ -216,6 +262,7 @@ void Pa::restart(Pa::RunMode mode){
      if( err != paNoError ) goto error;  
 } 
 
+// stop stream
 void Pa::stop(){
      runloop = false;
 
@@ -237,6 +284,7 @@ void Pa::stop(){
      fflush(stdout); 
 }
 
+// stop stream (close)
 void Pa::stop(bool close){
      runloop = false;
 
@@ -264,6 +312,12 @@ void Pa::stop(bool close){
      fflush(stdout);  
 }
 
+// explicitly terminate portaudio
+void Pa::terminate(){
+     Pa_Terminate();
+}
+
+// func to wrap mini callback -private-
 PaError Pa::paCb(const void *inputBuffer, void *outputBuffer,
                         unsigned long framesPerBuffer,
                         const PaStreamCallbackTimeInfo* timeInfo,
@@ -275,16 +329,19 @@ PaError Pa::paCb(const void *inputBuffer, void *outputBuffer,
     return paContinue;
 }
 
+// set sleep time
 void Pa::setSleepTime(unsigned long time){
      sleepTime = time;
 }
+// set sample format
 void Pa::setSampleFormat(PaSampleFormat format){
      sampleFormat = format;
 }
+// set finished callback
 void Pa::setFinishedCallBack(void(*func)(void* data)){
     streamFinished = func;
 }
-
+// set input device
 void Pa::setInputDevice(unsigned int index){
     int numdevices = 0;
     numdevices = Pa_GetDeviceCount(); 
@@ -308,7 +365,7 @@ void Pa::setInputDevice(unsigned int index){
     inputdevice = index;
     printf("\nInput device set to: %u: %s\n", index, info->name);
 }
-
+// set output device
 void Pa::setOutputDevice(unsigned int index){
     int numdevices = 0;
     numdevices = Pa_GetDeviceCount(); 
@@ -333,6 +390,7 @@ void Pa::setOutputDevice(unsigned int index){
     printf("\nOutput device set to: %u: %s\n", index, info->name);
 }
 
+// print available devices
 void Pa::listDevices(){
   const PaDeviceInfo *info;
   int numdevices = 0;
@@ -371,7 +429,7 @@ void Pa::listDevices(){
     }
 
 }
-
+// print device info
 void Pa::getDeviceInfo(unsigned int index){
   const PaDeviceInfo *info;
   int numdevices = 0;
@@ -400,7 +458,7 @@ void Pa::getDeviceInfo(unsigned int index){
   printf("Default sampling rate: %f\n", info->defaultSampleRate);
 
 }
-
+// get api name -private-
 const char* Pa::apiName(unsigned int index){
     
     const PaHostApiInfo* info;

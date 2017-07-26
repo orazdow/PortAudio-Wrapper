@@ -22,7 +22,8 @@ typedef struct{
       return sin(phase)*amp;
   }
     
-}Osc;
+}
+Osc;
 
 class Oscs{
 
@@ -47,15 +48,14 @@ public:
     }
     
     ~Oscs(){
-        printf("\nI'm ded\n");
+      //  printf("I'm ded");
     }
      
 };
 
 
 
-void minifunc(const float* in, float* out, unsigned long frames, void* data){
-    
+void minifunc(const float* in, float* out, unsigned long frames, void* data){    
            
      Oscs *o = (Oscs*)data;
     
@@ -67,20 +67,13 @@ void minifunc(const float* in, float* out, unsigned long frames, void* data){
        
 }
 
-void streamFinished(void* data){
-    Oscs *o = (Oscs*)data;
-    delete o;
-}
 
 int main(){
-    Oscs* o = new Oscs;
-   // Oscs o;
+    Oscs o;
     
-    Pa a(minifunc, std::make_shared<Oscs>(*o));
-  //  a.setFinishedCallBack(streamFinished); 
-    
+    Pa a(minifunc, &o);
     a.start(Pa::waitForKey);
-    printf("done");   
+    
     return 0;
 }
 
