@@ -232,7 +232,7 @@ void Pa::restart(Pa::RunMode mode){
          if(mode == RunMode::wait){ 
             runloop = true;
             while(runloop){
-          //  Pa_Sleep(50);
+          // Pa_Sleep(50);
             } 
        }
        
