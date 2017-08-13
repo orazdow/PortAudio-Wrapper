@@ -42,12 +42,12 @@ PortAudio can be obtained [here](www.portaudio.com).
 
 Define a callback where audio processing will occur and pass it as the constructor's first argument. The callback can be a simplified type: 
     
-    void paCallback(const float* inputBuffer, float* ouputBuffer, unsigned long framesPerBuffer, void* userData){ ... }
+    void paCallback(const float* inputBuffer, float* ouputBuffer, unsigned long framesPerBuffer, void* userData){...}
     
 or have the full signature specified by PortAudio  
 
     int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, 
-            const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData){ ... }
+            const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData){...}
             
 The wrapper's constructor can either take 2 arguments:&nbsp; the callback and a reference for passing user data (see passing data):
 
