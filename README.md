@@ -4,7 +4,7 @@ Helper class for PortAudio
 
 ---
 
-Provides a simple interface to PortAudio's callback API for reading and writing to an audio stream. 
+Provides a simple interface to PortAudio's callback API for reading and writing to audio devices. 
 
 ### Basic Example:
 
@@ -35,7 +35,7 @@ Provides a simple interface to PortAudio's callback API for reading and writing 
 
 **Requirements:**
 
-PortAudio can be obtained [here](www.portaudio.com).
+PortAudio can be obtained [here](http://www.portaudio.com/).
 
 
 **Initializing:**
