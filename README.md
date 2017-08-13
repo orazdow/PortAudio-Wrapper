@@ -33,7 +33,7 @@ Provides a simple interface to PortAudio's callback API for reading and writing 
 
 ### Usage:
 
-**Dependencies:**
+**Requirements:**
 
 PortAudio can be obtained [here](www.portaudio.com).
 
@@ -62,6 +62,7 @@ The 2-argument constructor is equivalent to:
 `Pa a(callback, 0, 1, 44100, 0, &data);` 
 
 <br>
+
 **Starting / stopping the audio stream:**
 
 Calling `start()` will start the stream.
@@ -79,6 +80,7 @@ For convenience, there are four  enum values that can be passed  to `start()` to
 PortAudio will be terminated when the wrapper object is destroyed, but can be explicitly terminated by calling `terminate()`
 
 <br>
+
 **Passing data:**
 
 PortAudio allows for user data  to be passed to the audio callback. This can be omitted in favor of global variables. NULL can be passed for the user data parameter in this case.
@@ -118,6 +120,7 @@ Alternatively, you can pass the data as a shared_ptr, which will delete resource
     Pa a(paFunc, std::shared_ptr<Osc>(osc));
 
 <br>
+
 **Querying / setting audio devices:**
 
 `listDevices()` prints a list of available input and output devices, sorted by device ID. 
