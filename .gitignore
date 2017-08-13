@@ -3,3 +3,4 @@
 /nbproject
 .dep.inc
 Makefile
+.gitignore
