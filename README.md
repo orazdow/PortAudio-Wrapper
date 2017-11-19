@@ -1,10 +1,10 @@
 # PortAudio Wrapper
 
-Helper class for PortAudio
-
----
+C++ wrapper class for PortAudio
 
 Provides a simple interface to PortAudio's callback API for reading and writing to audio devices. 
+
+---
 
 ### Basic Example:
 
