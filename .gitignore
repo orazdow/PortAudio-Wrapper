@@ -2,4 +2,5 @@
 /dist
 /nbproject
 .dep.inc
-Makefile
+out.exe
+# Makefile
