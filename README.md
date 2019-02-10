@@ -1,6 +1,6 @@
 # PortAudio Wrapper
 
-C++ wrapper class for PortAudio
+C++ wrapper for PortAudio
 
 Provides a simple interface to PortAudio's callback API for reading and writing to audio devices. 
 
@@ -8,7 +8,7 @@ Provides a simple interface to PortAudio's callback API for reading and writing 
 
 ### Basic Example:
 
-    #include "Pa.h"
+    #include "pa.h"
     #include "math.h"
     #define TWO_PI 6.2831853
 
@@ -49,7 +49,7 @@ or have the full signature specified by PortAudio
     int paCallback(const void* inputBuffer, void* outputBuffer, unsigned long framesPerBuffer, 
             const PaStreamCallbackTimeInfo* timeInfo, PaStreamCallbackFlags statusFlags, void* userData){...}
             
-The wrapper's constructor can either take 2 arguments:&nbsp; the callback and a reference for passing user data (see passing data):
+The wrapper's constructor can either take 2 arguments:&nbsp; the callback and a pointer for passing user data (see passing data):
 
 `Pa a(callback, &data);` 
 
@@ -85,7 +85,7 @@ PortAudio will be terminated when the wrapper object is destroyed, but can be ex
 
 PortAudio allows for user data  to be passed to the audio callback. This can be omitted in favor of global variables. NULL can be passed for the user data parameter in this case.
 
-To pass data, pass a reference to your data (you can omit the reference if the data is already pointer to an object) to the constructor, and cast the userData argument in the callback to your data type. For example:
+To pass data to the callback, pass a data pointer to the constructor, and recast the data argument in your callback to your data type. For example:
 
     void paFunc(const float* in, float* out, unsigned long frames, void* data){    
         Osc* o = (Osc*)data;
