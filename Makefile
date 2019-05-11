@@ -1,17 +1,19 @@
-TARGET := out.exe
-SRC := main.cpp pa.cpp
+TARGET = out
+SRC = main.cpp pa.cpp
 
-INCLUDE = -ID:/libraries/portaudio/include 
-LIBS = -LD:/libraries/portaudio/build 
-LIBS += -lportaudio
+INCLUDE = -I ../libraries/portaudio/include 
+LIBS = -lportaudio
 
-CXX := g++
-# FLAGS := -Wall
+# on mac/linux: libs are usually installed in /usr/lib which is likely in PATH
+LIBS += -L ../libraries/portaudio/build 
+
+CXX = g++
+FLAGS = -std=c++11
 
 all: $(TARGET)
 
 $(TARGET): $(SRC)
-	$(CXX) $(INCLUDE) $(FLAGS) $^ -o $@ $(LIBS)
+	$(CXX) $(INCLUDE) $(FLAGS) $(SRC) -o $(TARGET) $(LIBS)
 
 clean:
 	rm -f $(TARGET)

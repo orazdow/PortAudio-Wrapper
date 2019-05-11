@@ -181,7 +181,7 @@ void Pa::startStream(Pa::RunMode mode){
        }
        
        if(mode == RunMode::waitForKey){
-           printf("\nPress any key stop stream:\n");
+           printf("\nPress enter stop stream:\n");
            fflush(stdout);
            getchar();
        }
@@ -241,7 +241,7 @@ void Pa::restart(Pa::RunMode mode){
        }
        
        if(mode == RunMode::waitForKey){
-           printf("\nPress any key stop stream:\n");
+           printf("\nPress enter stop stream:\n");
            fflush(stdout);
            getchar();
        }
@@ -256,10 +256,7 @@ void Pa::restart(Pa::RunMode mode){
     
     error:               
     Pa_Terminate();
-    fprintf( stderr, "\nAn error occured while using the portaudio stream\n" );
-
-     err = Pa_Initialize();
-     if( err != paNoError ) goto error;  
+    fprintf( stderr, "\nAn error occured while using the portaudio stream\n" );  
 } 
 
 // stop stream
@@ -324,7 +321,7 @@ PaError Pa::paCb(const void *inputBuffer, void *outputBuffer,
                         PaStreamCallbackFlags statusFlags,
                         void* udata){
     
-    miniCb((const float*)inputBuffer, (float*)outputBuffer, framesPerBuffer, udata );
+    miniCb((const float*)inputBuffer, (float*)outputBuffer, (long)framesPerBuffer, udata);
     
     return paContinue;
 }

@@ -14,9 +14,9 @@ Provides a simple interface to PortAudio's callback API for reading and writing 
 
     double phase = 0, step = TWO_PI*440/44100.0;
 
-    void paFunc(const float* in, float* out, unsigned long frames, void* data){    
+    void paFunc(const float* in, float* out, long frames, void* data){    
         // play a 440Hz sine tone
-        for(unsigned long i = 0; i< frames; i++ ){
+        for(int i = 0; i < frames; i++ ){
              *out++ = sin(phase)*0.5;
              phase += step;
          }
@@ -42,7 +42,7 @@ PortAudio can be obtained [here](http://www.portaudio.com/).
 
 Define a callback where audio processing will occur and pass it as the constructor's first argument. The callback can be a simplified type: 
     
-    void paCallback(const float* inputBuffer, float* ouputBuffer, unsigned long framesPerBuffer, void* userData){...}
+    void paCallback(const float* inputBuffer, float* ouputBuffer, long framesPerBuffer, void* userData){...}
     
 or have the full signature specified by PortAudio  
 
@@ -87,9 +87,9 @@ PortAudio allows for user data  to be passed to the audio callback. This can be 
 
 To pass data to the callback, pass a data pointer to the constructor, and recast the data argument in your callback to your data type. For example:
 
-    void paFunc(const float* in, float* out, unsigned long frames, void* data){    
+    void paFunc(const float* in, float* out, long frames, void* data){    
         Osc* o = (Osc*)data;
-        for(unsigned long i=0; i< frames; i++ ){
+        for(long i = 0; i < frames; i++ ){
              *out++ = o->out();
          }
     }
@@ -168,7 +168,7 @@ To set an input or output device, enter a device ID with `setInputDevice(ID)` or
 
 **Typedefs**
 
-`void miniCallBack(const float*, float*, unsigned long, void*)`
+`void miniCallBack(const float*, float*, long, void*)`
 
 `int mainCallBack(const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void*)`
 

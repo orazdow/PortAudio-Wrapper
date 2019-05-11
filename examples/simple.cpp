@@ -4,9 +4,9 @@
 
     double phase = 0, step = TWO_PI*440/44100.0;
 
-    void paFunc(const float* in, float* out, unsigned long frames, void* data){    
+    void paFunc(const float* in, float* out, long frames, void* data){    
 
-        for(unsigned long i = 0; i < frames; i++ ){
+        for(int i = 0; i < frames; i++ ){
              phase += step;
              *out++ = sin(phase)*0.5;
          }

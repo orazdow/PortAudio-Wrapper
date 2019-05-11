@@ -25,7 +25,7 @@ RunMode mode = RunMode::dontTerminate;
 typedef int(*mainCallBack)(const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void*); 
 mainCallBack PaCallBack = nullptr;
 
-typedef void (*miniCallBack)(const float*, float*, unsigned long,void*);
+typedef void (*miniCallBack)(const float*, float*, long, void*);
 static miniCallBack miniCb;
  
 void (*streamFinished)(void*) = nullptr;

@@ -1,67 +1,51 @@
-#include "Pa.h"
+#include "pa.h"
 #include <math.h>
 
-#define tau 6.2831853
-#define sample_rate 44100
+const float tau = 6.2831853;
+const float sample_rate = 44100;
 
+/* FM Example */
 
-typedef struct{
+// oscillator
+struct Osc{
+    float freq;
+    float phase;
+    float out;
+};
 
-  double phase = 0;
-  double step = 0;
-  float amp = 1; 
-  
-  void set(float f, float a){
-      step = tau*f/sample_rate;
-      amp = a;
-  }
-  
-  double inc(){
-      phase += step;
-      if(step >= tau){ phase -= tau; }
-      return sin(phase)*amp;
-  }
-    
+// increment phase
+void increment(Osc* osc, float freq){
+    osc->phase += freq*tau/sample_rate;
+
+    if(osc->phase >= tau)
+        osc->phase -= tau;
+
+    osc->out = sinf(osc->phase);
 }
-Osc;
 
-class Oscs{
+// fm patch
+void fm(Osc* mod, Osc* car, float amp){
+    increment(mod, mod->freq);
+    increment(car, mod->out*amp + car->freq);
+}
 
-public:  
-    
-    Osc oscs[55];
-
-    Oscs(){
-
-        for (int i = 0; i < 55; i++){
-            oscs[i].set( 10+30*pow(2, ((40+i)/16.0))  , 1);
-        }
-
-    }
-
-    float sum(){
-        double sum = 0;
-        for (int i = 0; i < 55; i++) {
-            sum += oscs[i].inc();
-            }
-        return sum/55.0;   
-    }
-    
-    ~Oscs(){
-        
-    }
-     
+// fm data
+struct FmData{
+    Osc* mod;
+    Osc* car;
+    Osc* lfo;
 };
 
 
-
-void minifunc(const float* in, float* out, unsigned long frames, void* data){    
+void minifunc(const float* in, float* out, long frames, void* data){    
            
-     Oscs *o = (Oscs*)data;
+    FmData* d = (FmData*)data;
     
-    for(unsigned long i=0; i< frames; i++ ){
+    for(int i = 0; i < frames; i++){
 
-         *out++ = o->sum();
+        increment(d->lfo, d->lfo->freq);
+        fm(d->mod, d->car, (1 + d->lfo->out) * 1000);
+        *out++ = d->car->out * 0.7;
          
      }
        
@@ -69,9 +53,13 @@ void minifunc(const float* in, float* out, unsigned long frames, void* data){
 
 
 int main(){
-    Oscs o;
     
-    Pa a(minifunc, &o);
+    Osc car{290};
+    Osc mod{400};
+    Osc lfo{0.7};
+    FmData data{&mod, &car, &lfo};
+    
+    Pa a(minifunc, &data);
     a.start(Pa::waitForKey);
     
     return 0;
