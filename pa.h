@@ -25,7 +25,7 @@ RunMode mode = RunMode::dontTerminate;
 typedef int(*mainCallBack)(const void*, void*, unsigned long, const PaStreamCallbackTimeInfo*, PaStreamCallbackFlags, void*); 
 mainCallBack PaCallBack = nullptr;
 
-typedef void (*miniCallBack)(const float*, float*, long, void*);
+typedef void (*miniCallBack)(const float*, float*, unsigned long, void*);
 static miniCallBack miniCb;
  
 void (*streamFinished)(void*) = nullptr;
@@ -35,7 +35,7 @@ PaSampleFormat sampleFormat = paFloat32;
 unsigned long sleepTime = 10000;
 unsigned int inchannels = 0;
 unsigned int outchannels = 1;
-unsigned int framesperbuffer = 0;
+unsigned long framesperbuffer = 64;
 unsigned int samplerate = 44100;
 int inputdevice = -1;
 int outputdevice = -1;
@@ -63,20 +63,20 @@ public:
 // full callback, void* data    
 Pa(mainCallBack func, void* data); 
 // full callback, inchannels, outchannels, sampling rate, frames per buffer,  void* data 
-Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames,  void *data); 
+Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned long frames,  void *data); 
 // mini callback, void* data
 Pa(miniCallBack func, void* data); 
 // mini callback, inchannels, outchannels, sampling rate, frames per buffer, void* data
-Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames,  void *data); 
+Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned long frames,  void *data); 
 #ifdef CPP11
 // full callback, shared_ptr data
 Pa(mainCallBack func, std::shared_ptr<void> data); 
 // full callback, params, shared_ptr data
-Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames,  std::shared_ptr<void> data); 
+Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned long frames,  std::shared_ptr<void> data); 
 // mini callback, shared_ptr data
 Pa(miniCallBack func, std::shared_ptr<void> data); 
 // mini callback, params, shared_ptr data
-Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames,  std::shared_ptr<void> data); 
+Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned long frames,  std::shared_ptr<void> data); 
 #endif
 ~Pa();
 
@@ -94,6 +94,7 @@ void listDevices();
 void getDeviceInfo(unsigned int index);
 void setInputDevice(unsigned int index);
 void setOutputDevice(unsigned int index);
+void setFramesperBuffer(unsigned long);
 
 };
 
