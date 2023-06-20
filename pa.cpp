@@ -12,7 +12,7 @@ Pa::Pa(mainCallBack func, void* data){
     intialize();
 } 
 // full callback, inchannels, outchannels, sampling rate, frames per buffer, userdata
-Pa::Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, void *data){    
+Pa::Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned long frames, void *data){    
     PaCallBack = func;
     userDataType = data;
     samplerate = samp;
@@ -28,7 +28,7 @@ Pa::Pa(miniCallBack func, void* data){
     intialize();
 } 
  //mini callback,  inchannels, outchannels, sampling rate, frames per buffer, userdata
-Pa::Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, void *data){
+Pa::Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned long frames, void *data){
     miniCb = func;
     userDataType = data;
     samplerate = samp;
@@ -47,7 +47,7 @@ Pa::Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int sa
         intialize();
     } 
     // main callback, params
-    Pa::Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, std::shared_ptr<void> data){    
+    Pa::Pa(mainCallBack func, unsigned int inch, unsigned int outch, unsigned int samp, unsigned long frames, std::shared_ptr<void> data){    
         PaCallBack = func;
         s_ptr = data;
         userDataType = s_ptr.get();
@@ -65,7 +65,7 @@ Pa::Pa(miniCallBack func, unsigned int inch, unsigned int outch, unsigned int sa
         intialize();
     } 
     // mini callback, params
-    Pa::Pa(miniCallBack func,unsigned int inch, unsigned int outch, unsigned int samp, unsigned int frames, std::shared_ptr<void> data){
+    Pa::Pa(miniCallBack func,unsigned int inch, unsigned int outch, unsigned int samp, unsigned long frames, std::shared_ptr<void> data){
         miniCb = func;
         s_ptr = data;
         userDataType = s_ptr.get();
@@ -321,7 +321,7 @@ PaError Pa::paCb(const void *inputBuffer, void *outputBuffer,
                         PaStreamCallbackFlags statusFlags,
                         void* udata){
     
-    miniCb((const float*)inputBuffer, (float*)outputBuffer, (long)framesPerBuffer, udata);
+    miniCb((const float*)inputBuffer, (float*)outputBuffer, framesPerBuffer, udata);
     
     return paContinue;
 }
@@ -479,7 +479,7 @@ const char* Pa::apiName(unsigned int index){
         return info->name;
     
 }
-void setFramesperBuffer(long f){framesperbuffer = f;}
+void setFramesperBuffer(unsigned long f){framesperbuffer = f;}
 
 
     
