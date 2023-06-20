@@ -94,7 +94,7 @@ void listDevices();
 void getDeviceInfo(unsigned int index);
 void setInputDevice(unsigned int index);
 void setOutputDevice(unsigned int index);
-void setFramesperBufferr(long);
+void setFramesperBuffer(long);
 
 };
 
