@@ -479,6 +479,7 @@ const char* Pa::apiName(unsigned int index){
         return info->name;
     
 }
+void setFramesperBuffer(long f){framesperbuffer = f;}
 
 
     
