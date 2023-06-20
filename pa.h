@@ -35,7 +35,7 @@ PaSampleFormat sampleFormat = paFloat32;
 unsigned long sleepTime = 10000;
 unsigned int inchannels = 0;
 unsigned int outchannels = 1;
-unsigned int framesperbuffer = 0;
+unsigned int framesperbuffer = 64;
 unsigned int samplerate = 44100;
 int inputdevice = -1;
 int outputdevice = -1;
@@ -94,6 +94,7 @@ void listDevices();
 void getDeviceInfo(unsigned int index);
 void setInputDevice(unsigned int index);
 void setOutputDevice(unsigned int index);
+void setFramesperBufferr(long);
 
 };
 
